@@ -28,11 +28,11 @@ class ViewControllerLevels: UIViewController, UIPickerViewDelegate, UIPickerView
         pickerData = ["Beginner", "Intermediate", "Advanced"]
         
         // B
-        words[pickerData[0]] = ["human", "word2"]
+        words[pickerData[0]] = ["water", "moon"]
         // I
-        words[pickerData[1]] = ["Word3", "word4"]
+        words[pickerData[1]] = ["tea", "gold"]
         // A
-        words[pickerData[2]] = ["Word5", "Word6"]
+        words[pickerData[2]] = ["dragon", "love"]
         
         //self.Easy.selectedRow(inComponent: 0)
         

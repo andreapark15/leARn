@@ -9,6 +9,7 @@
 import UIKit
 import SceneKit
 import ARKit
+import Macaw
 
 class ViewControllerOverlay: UIViewController, ARSCNViewDelegate {
     
@@ -26,14 +27,13 @@ class ViewControllerOverlay: UIViewController, ARSCNViewDelegate {
         sceneView.showsStatistics = true
         
         // Create a new scene
-        //!!let scene = SCNScene(named: "art.scnassets/ship.scn")!
+        //let scene = SCNScene(named: "art.scnassets/ship.scn")!
         
         // Set the scene to the view
-        //!!sceneView.scene = scene
+        //sceneView.scene = scene
         
         //print(word!)
         // send word to API
-        
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -41,7 +41,7 @@ class ViewControllerOverlay: UIViewController, ARSCNViewDelegate {
         
         // Create a session configuration
         let configuration = ARWorldTrackingConfiguration()
-        
+        self.sceneView.debugOptions = []
         // Tell the session to automatically detect horizontal planes
         configuration.planeDetection = .horizontal
         
@@ -61,98 +61,79 @@ class ViewControllerOverlay: UIViewController, ARSCNViewDelegate {
         // Dispose of any resources that can be recreated.
     }
 
-    func createPlaneNode(anchor: ARPlaneAnchor) -> SCNNode {
-        // Create a SceneKit plane to visualize the node using its position and extent.
-        
-        // Create the geometry and its materials
-        let plane = SCNPlane(width: CGFloat(anchor.extent.x), height: CGFloat(anchor.extent.z))
-        
-        let lavaImage = UIImage(named: "Lava")
-        let lavaMaterial = SCNMaterial()
-        lavaMaterial.diffuse.contents = lavaImage
-        lavaMaterial.isDoubleSided = true
-        
-        plane.materials = [lavaMaterial]
-        
-        // Create a node with the plane geometry we created
-        let planeNode = SCNNode(geometry: plane)
-        planeNode.position = SCNVector3Make(anchor.center.x, 0, anchor.center.z)
-        
-        // SCNPlanes are vertically oriented in their local coordinate space.
-        // Rotate it to match the horizontal orientation of the ARPlaneAnchor.
-        planeNode.transform = SCNMatrix4MakeRotation(-Float.pi / 2, 1, 0, 0)
-        
-        return planeNode
-    }
     
-    // Try with a floor node instead - this didn't work so well but leaving in for reference
-    func createFloorNode(anchor: ARPlaneAnchor) -> SCNNode {
-        let floor = SCNFloor()
-        
-        let lavaImage = UIImage(named: "Lava")
-        
-        let lavaMaterial = SCNMaterial()
-        lavaMaterial.diffuse.contents = lavaImage
-        lavaMaterial.isDoubleSided = true
-        
-        floor.materials = [lavaMaterial]
-        
-        let floorNode = SCNNode(geometry: floor)
-        floorNode.position = SCNVector3Make(anchor.center.x, 0, anchor.center.z)
-        
-        return floorNode
-    }
-    
-    // MARK: - ARSCNViewDelegate
-    
-    /*
-     // Override to create and configure nodes for anchors added to the view's session.
-     func renderer(_ renderer: SCNSceneRenderer, nodeFor anchor: ARAnchor) -> SCNNode? {
-     let node = SCNNode()
-     
-     return node
-     }
-     */
-    
-    // The following functions are automatically called when the ARSessionView adds, updates, and removes anchors
-    
-    // When a plane is detected, make a planeNode for it
     func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
-        
+        // Place content only for anchors found by plane detection.
         guard let planeAnchor = anchor as? ARPlaneAnchor else { return }
         
-        let planeNode = createPlaneNode(anchor: planeAnchor)
+        // Create a SceneKit plane to visualize the plane anchor using its position and extent.
+        let plane = SCNPlane(width: CGFloat(planeAnchor.extent.x), height: CGFloat(planeAnchor.extent.z))
         
-        // ARKit owns the node corresponding to the anchor, so make the plane a child node.
+        let charImage = UIImage(named: word!)
+        let charMaterial = SCNMaterial()
+        charMaterial.diffuse.contents = charImage
+        charMaterial.isDoubleSided = true
+
+        plane.materials = [charMaterial]
+        
+        let planeNode = SCNNode(geometry: plane)
+        planeNode.simdPosition = float3(planeAnchor.center.x, 0, planeAnchor.center.z)
+        planeNode.scale = SCNVector3(x: 0.09, y: 0.08, z: 1)
+//        planeNode = .scale(sx: 0.33, sy: 0.35)
+        /*
+         `SCNPlane` is vertically oriented in its local coordinate space, so
+         rotate the plane to match the horizontal orientation of `ARPlaneAnchor`.
+         */
+        planeNode.eulerAngles.x = -.pi / 2
+        
+        // Make the plane visualization semitransparent to clearly show real-world placement.
+        planeNode.opacity = 0.6
+        
+        /*
+         Add the plane visualization to the ARKit-managed node so that it tracks
+         changes in the plane anchor as plane estimation continues.
+         */
         node.addChildNode(planeNode)
     }
     
-    // When a detected plane is updated, make a new planeNode
-    func renderer(_ renderer: SCNSceneRenderer, didUpdate node: SCNNode, for anchor: ARAnchor) {
-        guard let planeAnchor = anchor as? ARPlaneAnchor else { return }
-        
-        // Remove existing plane nodes
-        node.enumerateChildNodes {
-            (childNode, _) in
-            childNode.removeFromParentNode()
-        }
-        
-        
-        let planeNode = createPlaneNode(anchor: planeAnchor)
-        
-        node.addChildNode(planeNode)
-    }
-    
-    // When a detected plane is removed, remove the planeNode
-    func renderer(_ renderer: SCNSceneRenderer, didRemove node: SCNNode, for anchor: ARAnchor) {
-        guard anchor is ARPlaneAnchor else { return }
-        
-        // Remove existing plane nodes
-        node.enumerateChildNodes {
-            (childNode, _) in
-            childNode.removeFromParentNode()
-        }
-    }
+//    func createPlaneNode(anchor: ARPlaneAnchor) -> SCNNode {
+//        // Create a SceneKit plane to visualize the node using its position and extent.
+//
+//        // Create the geometry and its materials
+//        let plane = SCNPlane(width: CGFloat(anchor.extent.x), height: CGFloat(anchor.extent.z))
+//
+//        let charImage = UIImage(named: "a")
+//        let charMaterial = SCNMaterial()
+//        charMaterial.diffuse.contents = charImage
+//        charMaterial.isDoubleSided = true
+//
+//        plane.materials = [charMaterial]
+//
+//        // Create a node with the plane geometry we created
+//        let planeNode = SCNNode(geometry: plane)
+//        planeNode.position = SCNVector3Make(anchor.center.x, 0, anchor.center.z)
+//
+//        // SCNPlanes are vertically oriented in their local coordinate space.
+//        // Rotate it to match the horizontal orientation of the ARPlaneAnchor.
+//        planeNode.transform = SCNMatrix4MakeRotation(-Float.pi / 2, 1, 0, 0)
+//
+//        /*
+//         `SCNPlane` is vertically oriented in its local coordinate space, so
+//         rotate the plane to match the horizontal orientation of `ARPlaneAnchor`.
+//         */
+//        planeNode.eulerAngles.x = -.pi / 2
+//
+//        // Make the plane visualization semitransparent to clearly show real-world placement.
+//        planeNode.opacity = 0.25
+//
+//        /*
+//         Add the plane visualization to the ARKit-managed node so that it tracks
+//         changes in the plane anchor as plane estimation continues.
+//         */
+////        node.addChildNode(planeNode)
+//
+//        return planeNode
+//    }
     
     
     func session(_ session: ARSession, didFailWithError error: Error) {
